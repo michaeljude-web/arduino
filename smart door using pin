@@ -1,0 +1,136 @@
+#include <Servo.h>
+#include <LiquidCrystal_I2C.h>
+
+// Pin configuration
+const int rowPins[4] = {2, 3, 4, 5};
+const int colPins[4] = {6, 7, 8, 9};
+
+// Initialize LCD
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+//Initialize Servo
+Servo myServo;
+
+// Keypad layout
+char keys[4][4] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '=', 'D'}
+};
+
+String pin = "1234";
+String inputPin = "";
+String maskedPin = "";
+
+void setup() {
+  // Initialize LCD
+  lcd.init();
+  lcd.clear();
+  lcd.backlight();
+  
+  // Set row pins as OUTPUT
+  for (int i = 0; i < 4; i++) {
+    pinMode(rowPins[i], OUTPUT);
+    digitalWrite(rowPins[i], HIGH);
+  }
+  
+  // Set column pins as INPUT with pull-up resistors
+  for (int i = 0; i < 4; i++) {
+    pinMode(colPins[i], INPUT_PULLUP);
+  }
+  
+  // Display initial message
+  lcd.setCursor(0, 0);
+  lcd.print("Enter PIN No.");
+  delay(1000);
+  //Attach Servo
+  myServo.attach(10);
+  myServo.write(0);
+}
+
+void loop() {
+  lcd.setCursor(0,0);
+  lcd.print("Enter PIN No.");
+  // Scan keypad
+  char keyPressed = getKeyPressed();
+  
+  // If a key was pressed, process it
+  if (keyPressed != '\0') {
+    processKey(keyPressed);
+    delay(200); // Debounce delay
+  }
+  
+}
+
+char getKeyPressed() {
+  for (int row = 0; row < 4; row++) {
+    digitalWrite(rowPins[row], LOW);
+    
+    for (int col = 0; col < 4; col++) {
+      if (digitalRead(colPins[col]) == LOW) {
+        digitalWrite(rowPins[row], HIGH);
+        return keys[row][col];
+      }
+    }
+    
+    digitalWrite(rowPins[row], HIGH);
+  }
+  
+  return '\0'; // No key pressed
+}
+
+void processKey(char keyPressed) {
+  if(keyPressed == 'D'){
+    if(pin == inputPin){
+      openDoor();
+    }
+    else{
+      displayWarning();
+    }
+  }
+  else if(keyPressed == 'C'){
+    lcd.setCursor(0, 1);
+    lcd.clear();
+    inputPin = "";
+    maskedPin = "";
+  }
+  else{
+    inputPin += keyPressed;
+    displayMaskedPin();
+  }
+  
+  
+}
+void displayMaskedPin(){
+  maskedPin += "*";
+  lcd.setCursor(0,1);
+  lcd.print(maskedPin);
+}
+void openDoor(){
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("WELCOME!");
+  lcd.setCursor(0,1);
+  lcd.print("Door Opened");
+  for(int pos = 0; pos < 90; pos++){
+    myServo.write(pos);
+    delay(15);
+  }
+  for(int pos = 90; pos >=0; pos--){
+    myServo.write(pos);
+    delay(15);
+  }
+  delay(1000);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Enter PIN No.");
+  inputPin = "";
+  maskedPin = "";
+}
+void displayWarning(){
+  lcd.clear();
+  inputPin = "";
+  maskedPin = "";
+  lcd.setCursor(0,1);
+  lcd.print("Wrong PIN");
+}
